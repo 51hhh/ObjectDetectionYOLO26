@@ -1,0 +1,52 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyd
+*.pyo
+*.so
+
+# Virtual environment
+.venv/
+venv/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Training and inference outputs
+runs/
+
+# Dataset caches and generated data
+coco/images/
+coco/labels/
+coco/annotations/
+coco/*.txt
+coco/*.cache
+coco/summary.json
+
+# Large model weights
+
+*.onnx
+*.engine
+*.torchscript
+
+# Raw archives
+*.zip
+*.7z
+*.rar
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Temporary files
+*.tmp
+*.bak

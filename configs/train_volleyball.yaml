@@ -1,0 +1,17 @@
+model: yolo26n.pt
+data: coco/data.yaml
+epochs: 120
+imgsz: 640
+batch: 0.8
+device: 0
+workers: 8
+optimizer: auto
+patience: 40
+pretrained: true
+amp: true
+cache: ram
+project: runs
+name: volleyball_train
+exist_ok: true
+save_period: 10
+verbose: true

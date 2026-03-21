@@ -1,0 +1,6 @@
+path: "C:/Users/Rick/Desktop/python/ObjectDetectionYOLO26/coco"
+train: images/train
+val: images/val
+test: images/test
+names:
+  0: volleyball
