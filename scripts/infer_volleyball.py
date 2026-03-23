@@ -1,10 +1,11 @@
 from argparse import ArgumentParser
 from pathlib import Path
+from urllib.parse import urlparse
 
 from ultralytics import YOLO
 
 ROOT = Path(__file__).resolve().parents[1]
-DEFAULT_WEIGHTS = ROOT / "runs" / "volleyball_train" / "weights" / "best.pt"
+DEFAULT_WEIGHTS = ROOT / "weight" / "best.pt"
 DEFAULT_PROJECT = ROOT / "runs"
 
 
@@ -21,8 +22,8 @@ def parse_args():
     parser.add_argument("--weights", default=str(DEFAULT_WEIGHTS), help="Path to model weights")
     parser.add_argument("--imgsz", type=int, default=640, help="Inference image size")
     parser.add_argument("--conf", type=float, default=0.25, help="Confidence threshold")
-    parser.add_argument("--iou", type=float, default=0.45, help="NMS IoU threshold")
-    parser.add_argument("--device", default="0", help="CUDA device, e.g. 0 or cpu")
+    parser.add_argument("--iou", type=float, default=0.15, help="NMS IoU threshold")
+    parser.add_argument("--device", default="cpu", help="CUDA device, e.g. 0 or cpu")
     parser.add_argument("--name", default="volleyball_predict", help="Output run name")
     parser.add_argument("--save-txt", action="store_true", help="Save YOLO txt predictions")
     parser.add_argument("--save-conf", action="store_true", help="Save confidence in txt output")
@@ -30,9 +31,16 @@ def parse_args():
     return parser.parse_args()
 
 
+def is_stream_url(value: str) -> bool:
+    parsed = urlparse(value)
+    return bool(parsed.scheme and parsed.netloc)
+
+
 def normalize_source(value: str):
     if value.isdigit():
         return int(value)
+    if is_stream_url(value):
+        return value
     return resolve_path(value)
 
 

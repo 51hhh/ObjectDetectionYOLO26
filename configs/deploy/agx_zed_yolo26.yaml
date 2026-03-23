@@ -1,0 +1,23 @@
+weights: weight/best.pt
+onnx: deploy/agx_zed/models/best.onnx
+engine: deploy/agx_zed/models/best.engine
+imgsz: 640
+conf: 0.25
+iou: 0.45
+class_id: 0
+keep_topk: 1
+show: true
+
+camera:
+  source: zed_left
+  depth_window_radius: 2
+  min_depth_m: 0.1
+  max_depth_m: 20.0
+  resolution: HD1200
+  fps: 60
+
+coordinates:
+  x_axis: right_positive
+  y_axis: up_positive
+  d_axis: euclidean_distance_m
+  depth_axis: forward_z_m

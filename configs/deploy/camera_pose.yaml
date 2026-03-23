@@ -1,0 +1,6 @@
+world_from_camera:
+  rotation:
+    - [1.0, 0.0, 0.0]
+    - [0.0, 1.0, 0.0]
+    - [0.0, 0.0, 1.0]
+  translation_m: [0.0, 0.0, 0.0]

@@ -50,3 +50,7 @@ coco/summary.json
 # Temporary files
 *.tmp
 *.bak
+
+# Deploy artifacts
+example/
+deploy/agx_zed/build/
