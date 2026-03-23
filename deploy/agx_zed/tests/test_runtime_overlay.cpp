@@ -58,6 +58,12 @@ int main() {
     if (int rc = require(make_status_text(runtime_warning) == "Runtime warning",
                          "expected runtime-warning status text")) return rc;
 
+    auto fatal_camera_error = make_result(false, false, false);
+    fatal_camera_error.camera_frame_transient_error = true;
+    fatal_camera_error.has_runtime_error = true;
+    if (int rc = require(make_status_text(fatal_camera_error) == "Runtime warning",
+                         "expected fatal camera error to prefer runtime warning status")) return rc;
+
     const auto no_detection = make_result(false, false, false);
     if (int rc = require(make_status_text(no_detection) == "No detection",
                          "expected no-detection status text")) return rc;

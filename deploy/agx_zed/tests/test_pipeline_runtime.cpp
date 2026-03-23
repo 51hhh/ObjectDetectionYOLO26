@@ -161,8 +161,8 @@ int main() {
                              "expected fatal camera error flag to be set")) return rc;
         if (int rc = require(result.runtime_error_message == "ZED camera is not open",
                              "expected fatal camera error message to be preserved")) return rc;
-        if (int rc = require(result.camera_frame_transient_error,
-                             "expected missing camera frame to be flagged")) return rc;
+        if (int rc = require(!result.camera_frame_transient_error,
+                             "expected fatal camera error not to be mislabeled as transient")) return rc;
         if (int rc = require(error == "ZED camera is not open",
                              "expected fatal camera error to propagate")) return rc;
     }

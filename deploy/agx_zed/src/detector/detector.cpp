@@ -56,7 +56,10 @@ bool Detector::detect(const cv::Mat& image,
     const LetterboxMeta meta = make_letterbox_meta(image, config_.imgsz);
     const auto& output = engine_.infer(image, error_message);
     if (output.empty()) {
-        return error_message == nullptr || error_message->empty();
+        if (error_message && !error_message->empty()) {
+            return false;
+        }
+        return true;  // empty output but no error: legitimate "no detections"
     }
 
     detections_out = decode_yolo_detections(output,

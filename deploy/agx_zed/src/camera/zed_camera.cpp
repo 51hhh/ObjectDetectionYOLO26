@@ -6,11 +6,33 @@
 #include <opencv2/imgproc.hpp>
 #include <sl/Camera.hpp>
 
+namespace {
+
+bool is_fatal_grab_error(sl::ERROR_CODE err) {
+    switch (err) {
+        case sl::ERROR_CODE::CAMERA_NOT_DETECTED:
+        case sl::ERROR_CODE::CAMERA_NOT_INITIALIZED:
+        case sl::ERROR_CODE::CAMERA_FAILED_TO_SETUP:
+        case sl::ERROR_CODE::CAMERA_DETECTION_ISSUE:
+        case sl::ERROR_CODE::CANNOT_START_CAMERA_STREAM:
+        case sl::ERROR_CODE::DRIVER_FAILURE:
+        case sl::ERROR_CODE::CORRUPTED_SDK_INSTALLATION:
+        case sl::ERROR_CODE::NO_GPU_DETECTED:
+        case sl::ERROR_CODE::CUDA_ERROR:
+        case sl::ERROR_CODE::NVIDIA_DRIVER_OUT_OF_DATE:
+        case sl::ERROR_CODE::INVALID_FUNCTION_CALL:
+            return true;
+        default:
+            return false;
+    }
+}
+
+}  // namespace
+
 namespace agx_zed {
 
 struct ZedCamera::Impl {
     sl::Camera camera;
-    AppConfig config;
 };
 
 namespace {
@@ -34,7 +56,6 @@ ZedCamera::~ZedCamera() {
 bool ZedCamera::open(const AppConfig& config, std::string* error_message) {
     close();
     impl_ = new Impl();
-    impl_->config = config;
 
     sl::InitParameters params;
     params.camera_resolution = resolve_resolution(config.resolution);
@@ -68,13 +89,28 @@ CameraGrabStatus ZedCamera::grab(CameraFrame& frame, std::string* error_message)
         if (error_message) {
             *error_message = std::string("ZED grab failed: ") + sl::toString(grab_error).c_str();
         }
-        return CameraGrabStatus::TransientFailure;
+        return is_fatal_grab_error(grab_error)
+            ? CameraGrabStatus::FatalFailure
+            : CameraGrabStatus::TransientFailure;
     }
 
     sl::Mat left;
     sl::Mat depth;
-    impl_->camera.retrieveImage(left, sl::VIEW::LEFT, sl::MEM::CPU);
-    impl_->camera.retrieveMeasure(depth, sl::MEASURE::DEPTH, sl::MEM::CPU);
+    const sl::ERROR_CODE retrieve_err = impl_->camera.retrieveImage(left, sl::VIEW::LEFT, sl::MEM::CPU);
+    if (retrieve_err != sl::ERROR_CODE::SUCCESS) {
+        if (error_message) {
+            *error_message = std::string("ZED retrieveImage failed: ") + sl::toString(retrieve_err).c_str();
+        }
+        return CameraGrabStatus::TransientFailure;
+    }
+
+    const sl::ERROR_CODE depth_err = impl_->camera.retrieveMeasure(depth, sl::MEASURE::DEPTH, sl::MEM::CPU);
+    if (depth_err != sl::ERROR_CODE::SUCCESS) {
+        if (error_message) {
+            *error_message = std::string("ZED retrieveMeasure failed: ") + sl::toString(depth_err).c_str();
+        }
+        return CameraGrabStatus::TransientFailure;
+    }
 
     const int width = left.getWidth();
     const int height = left.getHeight();

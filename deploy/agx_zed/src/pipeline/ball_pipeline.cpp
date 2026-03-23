@@ -1,5 +1,7 @@
 #include "pipeline/ball_pipeline.h"
 
+#include <exception>
+
 #include "geometry/depth_sampler.h"
 #include "geometry/projection.h"
 #include "geometry/world_transform.h"
@@ -30,16 +32,9 @@ bool BallPipeline::process_once(PipelineResult& result, std::string* error_messa
     result = PipelineResult{};
 
     const CameraGrabStatus grab_status = camera_->grab(frame, error_message);
-    if (grab_status == CameraGrabStatus::FatalFailure) {
-        result.camera_frame_transient_error = true;
-        result.has_runtime_error = true;
-        if (error_message) {
-            result.runtime_error_message = *error_message;
-        }
-        return true;
-    }
-    if (grab_status == CameraGrabStatus::TransientFailure) {
-        result.camera_frame_transient_error = true;
+    if (grab_status != CameraGrabStatus::Ok) {
+        result.camera_frame_transient_error = grab_status == CameraGrabStatus::TransientFailure;
+        result.has_runtime_error = grab_status == CameraGrabStatus::FatalFailure;
         if (error_message) {
             result.runtime_error_message = *error_message;
         }
@@ -52,10 +47,19 @@ bool BallPipeline::process_once(PipelineResult& result, std::string* error_messa
     }
 
     std::vector<Detection2D> detections;
-    if (!detector_->detect(frame.left_bgr, detections, error_message)) {
+    try {
+        if (!detector_->detect(frame.left_bgr, detections, error_message)) {
+            result.has_runtime_error = true;
+            if (error_message) {
+                result.runtime_error_message = *error_message;
+            }
+            return true;
+        }
+    } catch (const std::exception& ex) {
         result.has_runtime_error = true;
+        result.runtime_error_message = std::string("Detector exception: ") + ex.what();
         if (error_message) {
-            result.runtime_error_message = *error_message;
+            *error_message = result.runtime_error_message;
         }
         return true;
     }

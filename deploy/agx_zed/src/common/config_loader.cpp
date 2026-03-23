@@ -86,7 +86,7 @@ AppConfig load_app_config(const std::string& file_path) {
     config.iou = get_float(root, "iou", 0.45f);
     config.class_id = get_int(root, "class_id", 0);
     config.keep_topk = get_int(root, "keep_topk", 1);
-    config.show = get_bool(root, "show", true);
+    config.show = get_bool(root, "show", false);
 
     const YAML::Node camera = root["camera"];
     if (camera) {

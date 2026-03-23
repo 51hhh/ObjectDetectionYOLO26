@@ -1,9 +1,12 @@
+#include <algorithm>
+#include <chrono>
 #include <cstdint>
 #include <exception>
 #include <iomanip>
 #include <iostream>
 #include <sstream>
 #include <string>
+#include <thread>
 
 #include <opencv2/highgui.hpp>
 
@@ -74,6 +77,9 @@ int main(int argc, char** argv) {
         std::string last_camera_warning;
         std::string last_runtime_error;
         std::uint64_t frame_index = 0;
+        int consecutive_camera_errors = 0;
+        constexpr int kMaxTransientBackoffMs = 1000;
+        constexpr int kTransientBackoffStepMs = 50;
         while (true) {
             agx_zed::PipelineResult result;
             const bool ok = pipeline.process_once(result, &error);
@@ -98,21 +104,29 @@ int main(int argc, char** argv) {
             }
 
             if (result.camera_frame_transient_error) {
+                ++consecutive_camera_errors;
                 const std::string camera_warning = result.runtime_error_message.empty()
                     ? error
                     : result.runtime_error_message;
                 if (camera_warning != last_camera_warning) {
-                    std::cerr << "Camera frame unavailable: " << camera_warning << std::endl;
+                    std::cerr << "Camera frame unavailable (" << consecutive_camera_errors
+                              << "): " << camera_warning << std::endl;
                     last_camera_warning = camera_warning;
                 }
+                const int backoff_ms = std::min(
+                    consecutive_camera_errors * kTransientBackoffStepMs,
+                    kMaxTransientBackoffMs);
                 if (config.show) {
-                    const int key = cv::waitKey(1);
+                    const int key = cv::waitKey(backoff_ms > 0 ? backoff_ms : 1);
                     if (key == 27 || key == 'q' || key == 'Q') {
                         break;
                     }
+                } else if (backoff_ms > 0) {
+                    std::this_thread::sleep_for(std::chrono::milliseconds(backoff_ms));
                 }
                 continue;
             }
+            consecutive_camera_errors = 0;
             last_camera_warning.clear();
 
             const std::string status = agx_zed::make_status_text(result);

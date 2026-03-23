@@ -53,11 +53,11 @@ std::string format_depth_text(const PipelineResult& result) {
 }  // namespace
 
 std::string make_status_text(const PipelineResult& result) {
-    if (result.camera_frame_transient_error) {
-        return "Camera frame unavailable";
-    }
     if (result.has_runtime_error) {
         return "Runtime warning";
+    }
+    if (result.camera_frame_transient_error) {
+        return "Camera frame unavailable";
     }
     if (!result.has_detection) {
         return "No detection";
@@ -74,11 +74,24 @@ void draw_overlay(cv::Mat& frame, const PipelineResult& result) {
     }
 
     const std::string status = make_status_text(result);
-    const cv::Scalar status_color = result.relative.valid ? cv::Scalar(0, 255, 0)
-                                                          : (result.has_detection ? cv::Scalar(0, 255, 255)
-                                                                                  : cv::Scalar(0, 165, 255));
+    cv::Scalar status_color;
+    if (result.camera_frame_transient_error || result.has_runtime_error) {
+        status_color = cv::Scalar(0, 0, 255);   // red: error
+    } else if (result.relative.valid) {
+        status_color = cv::Scalar(0, 255, 0);   // green: tracking
+    } else if (result.has_detection) {
+        status_color = cv::Scalar(0, 255, 255); // yellow: detection but no depth
+    } else {
+        status_color = cv::Scalar(0, 165, 255); // orange: no detection
+    }
+
     put_line(frame, status, 0, status_color);
-    put_line(frame, "Press q or ESC to exit", 1, cv::Scalar(255, 255, 255));
+
+    int next_line_index = 1;
+    if (result.has_runtime_error && !result.runtime_error_message.empty()) {
+        put_line(frame, result.runtime_error_message.substr(0, 80), next_line_index++, cv::Scalar(0, 0, 255));
+    }
+    put_line(frame, "Press q or ESC to exit", next_line_index++, cv::Scalar(255, 255, 255));
 
     if (!result.has_detection) {
         return;
@@ -94,20 +107,21 @@ void draw_overlay(cv::Mat& frame, const PipelineResult& result) {
     const cv::Point center = clamp_point(frame,
                                          static_cast<int>(std::round(bbox.center_x())),
                                          static_cast<int>(std::round(bbox.center_y())));
+    const int detection_line_index = next_line_index;
 
     cv::rectangle(frame, top_left, bottom_right, cv::Scalar(0, 255, 0), 2);
     cv::circle(frame, center, 4, cv::Scalar(0, 0, 255), -1);
-    put_line(frame, format_detection_text(result), 2, cv::Scalar(255, 255, 255));
+    put_line(frame, format_detection_text(result), detection_line_index, cv::Scalar(255, 255, 255));
 
     if (result.depth_sample.valid && result.relative.valid) {
-        put_line(frame, format_relative_text(result), 3, cv::Scalar(0, 255, 0));
-        put_line(frame, format_depth_text(result), 4, cv::Scalar(0, 255, 0));
+        put_line(frame, format_relative_text(result), detection_line_index + 1, cv::Scalar(0, 255, 0));
+        put_line(frame, format_depth_text(result), detection_line_index + 2, cv::Scalar(0, 255, 0));
         return;
     }
 
-    put_line(frame, "depth invalid", 3, cv::Scalar(0, 255, 255));
+    put_line(frame, "depth invalid", detection_line_index + 1, cv::Scalar(0, 255, 255));
     if (result.depth_sample.valid_count > 0) {
-        put_line(frame, format_depth_text(result), 4, cv::Scalar(0, 255, 255));
+        put_line(frame, format_depth_text(result), detection_line_index + 2, cv::Scalar(0, 255, 255));
     }
 }
 

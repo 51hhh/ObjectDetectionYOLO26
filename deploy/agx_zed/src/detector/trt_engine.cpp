@@ -4,6 +4,7 @@
 #include <NvInfer.h>
 
 #include <fstream>
+#include <iostream>
 #include <memory>
 #include <opencv2/imgproc.hpp>
 #include <vector>
@@ -15,8 +16,9 @@ namespace {
 class TrtLogger : public nvinfer1::ILogger {
 public:
     void log(Severity severity, const char* msg) noexcept override {
-        (void)severity;
-        (void)msg;
+        if (severity == Severity::kERROR || severity == Severity::kINTERNAL_ERROR) {
+            std::cerr << "[TensorRT] " << msg << std::endl;
+        }
     }
 };
 
@@ -339,11 +341,11 @@ const std::vector<float>& TrtEngine::infer(const cv::Mat& image_bgr, std::string
         return host_output_;
     }
 
-    std::vector<void*> bindings(static_cast<std::size_t>(impl_->engine->getNbBindings()), nullptr);
+    void* bindings[2] = {nullptr, nullptr};
     bindings[impl_->input_binding_index] = impl_->input_buffer.ptr;
     bindings[impl_->output_binding_index] = impl_->output_buffer.ptr;
 
-    if (!impl_->context->enqueueV2(bindings.data(), impl_->stream, nullptr)) {
+    if (!impl_->context->enqueueV2(bindings, impl_->stream, nullptr)) {
         if (error_message) {
             *error_message = "TensorRT enqueueV2 failed";
         }
